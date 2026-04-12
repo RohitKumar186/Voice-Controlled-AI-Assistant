@@ -21,9 +21,10 @@ pyautogui.FAILSAFE = True
 recognizer = sr.Recognizer()
 
 STATE = {
-    "current_app": None,
-    "current_website": None,
-    "last_query": None,
+    "current_app": "",
+    "current_website": "",
+    "last_command": "",
+    "last_query": "",
     "history": []
 }
 
@@ -37,6 +38,7 @@ def update_state(step):
     # 🌐 Track website
     if action == "open_website":
         url = step.get("url", "")
+
         if "youtube" in url:
             STATE["current_website"] = "youtube"
         elif "google" in url:
@@ -50,55 +52,9 @@ def update_state(step):
     STATE["history"].append(step)
 
 def apply_rules(actions):
-
-    fixed = []
-
-    last_query = None
-
-    # 🔥 STEP 1: extract query
-    for step in actions:
-        if step.get("action") == "type_text":
-            last_query = step.get("text")
-
-    for i, step in enumerate(actions):
-
-        action = step.get("action")
-
-        # 🔥 Fix youtube URL
-        if action == "open_website":
-            url = step.get("url", "")
-
-            if "youtube" in url and not url.startswith("http"):
-                step["url"] = "https://youtube.com"
-
-        fixed.append(step)
-
-        # 🔥 If youtube detected → inject search flow
-        if action == "open_website" and "youtube" in step.get("url", ""):
-
-            if last_query:
-                fixed.append({
-                    "action": "open_website",
-                    "url": f"https://www.youtube.com/results?search_query={last_query.replace(' ', '+')}"
-                })
-
-                fixed.append({
-                    "action": "click"
-                })
-
-    # 🔥 WINDOWS SEARCH CONTROL
-    filtered = []
-    last_command = STATE.get("last_command", "").lower()
-
-    for step in fixed:
-
-        if step.get("action") == "open_search":
-            if "windows" not in last_command:
-                continue
-
-        filtered.append(step)
-
-    return filtered
+    print("Actions from LLM:", actions)
+    # For now we let LLM decide directly (we will improve later if needed)
+    return actions
 # 🔥 CONTEXT MEMORY
 CURRENT_APP = None
 
@@ -314,7 +270,9 @@ def execute(command):
             else:
                 os.system(f"start {app}")
 
-            time.sleep(3)
+            time.sleep(6)
+            if app == "whatsapp":
+                time.sleep(2)   # extra time for WhatsApp to load
 
         # 🌐 SEARCH
         elif action_type == "search_web":

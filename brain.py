@@ -24,48 +24,75 @@ def understand_command(user_input):
     if len(user_input.split()) <= 1:
         print("Ignoring short command")
         return []
+    
 
     prompt = f"""
-    Convert the user command into a sequence of executable actions.
+You are Zoro (bro), a smart and helpful voice assistant for Rohit on Windows laptop.
 
-    STRICT RULES:
-    - Only return valid JSON list []
-    - No explanation
-- Each step must have "action"
+Understand natural spoken commands and convert them into simple executable actions.
+
+STRICT RULES:
+- Return ONLY valid JSON array [] 
+- No explanations, no extra text, no markdown
+- Use ONLY the allowed actions
+- For "open app search ABC" in WhatsApp → open_app + hotkey Ctrl+F + type_text
+- For "open app and type ABC" → open_app + type_text
+- For "open windows search XYZ" → open_search + type_text + press_enter
 
 Allowed actions:
-- open_app
-- open_search
-- open_website
-- type_text
-- press_enter
-- press_key
-- hotkey
-- click
+- open_app          → {{"action": "open_app", "app": "name"}}
+- open_website      → {{"action": "open_website", "url": "https://..."}}
+- open_search       → {{"action": "open_search"}}
+- type_text         → {{"action": "type_text", "text": "exact text"}}
+- press_enter       → {{"action": "press_enter"}}
+- hotkey            → {{"action": "hotkey", "keys": ["ctrl", "f"]}}
+- click             → {{"action": "click"}}
 
-Examples:
+Examples (follow exactly):
 
 User: open whatsapp
 [{{"action": "open_app", "app": "whatsapp"}}]
 
-User: search free fire
+User: open whatsapp search mehar
 [
-  {{"action": "open_search"}},
-  {{"action": "type_text", "text": "free fire"}},
+  {{"action": "open_app", "app": "whatsapp"}},
+  {{"action": "hotkey", "keys": ["ctrl", "f"]}},
+  {{"action": "type_text", "text": "mehar"}}
+]
+
+User: open whatsapp search mehar type hello then press enter
+[
+  {{"action": "open_app", "app": "whatsapp"}},
+  {{"action": "hotkey", "keys": ["ctrl", "f"]}},
+  {{"action": "type_text", "text": "mehar"}},
+  {{"action": "type_text", "text": "hello"}},
   {{"action": "press_enter"}}
 ]
 
-User: open youtube and play song
-[
-  {{"action": "open_website", "url": "https://youtube.com"}},
-  {{"action": "type_text", "text": "song"}},
-  {{"action": "press_enter"}}
-]
-
-User: open notepad and type hello
+User: open notepad and type hello how are you
 [
   {{"action": "open_app", "app": "notepad"}},
-  {{"action": "type_text", "text": "hello"}}
+  {{"action": "type_text", "text": "hello how are you"}}
+]
+
+User: open command prompt type dir then press enter
+[
+  {{"action": "open_app", "app": "cmd"}},
+  {{"action": "type_text", "text": "dir"}},
+  {{"action": "press_enter"}}
+]
+
+User: open windows search multisim
+[
+  {{"action": "open_search"}},
+  {{"action": "type_text", "text": "multisim"}},
+  {{"action": "press_enter"}}
+]
+
+User: open chrome search technical
+[
+  {{"action": "open_app", "app": "chrome"}},
+  {{"action": "open_website", "url": "https://www.google.com/search?q=technical"}}
 ]
 
 User: {user_input}
@@ -73,7 +100,7 @@ User: {user_input}
 
     try:
         response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model="llama-3.3-70b-versatile",
             messages=[
                 {"role": "system", "content": "You are a strict JSON command parser."},
                 {"role": "user", "content": prompt}
@@ -85,6 +112,8 @@ User: {user_input}
         print("RAW LLM OUTPUT:", result)
 
         cleaned = result.strip()
+        # After cleaned = result.strip()
+        cleaned = re.sub(r'^.*?($$   .*   $$)', r'\1', cleaned, flags=re.DOTALL)  # extract JSON array
 
         # 🔥 REMOVE MARKDOWN
         if cleaned.startswith("```"):
@@ -158,26 +187,44 @@ User: {user_input}
 
     try:
         response = client.chat.completions.create(
-            model="llama-3.1-70b-versatile",
+            model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": "You are an intent detection AI."},
+                {"role": "system", "content": "You are a strict JSON command parser."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0
         )
 
         result = response.choices[0].message.content
-        print("INTENT RAW:", result)
+        print("RAW LLM OUTPUT:", result)
 
         cleaned = result.strip()
 
+        # Remove markdown code blocks if any
         if cleaned.startswith("```"):
-            cleaned = cleaned.replace("```json", "").replace("```", "").strip()
+            cleaned = cleaned.split("```")[1].strip()
+            if cleaned.lower().startswith("json"):
+                cleaned = cleaned[4:].strip()
 
-        intent = json.loads(cleaned)
+        # Extract only the JSON array safely
+        import re
+        match = re.search(r'\[[\s\S]*?\]', cleaned)
+        if match:
+            cleaned = match.group(0)
 
-        return intent
+        print("CLEANED OUTPUT:", cleaned)
+
+        # Parse the JSON
+        actions = json.loads(cleaned)
+
+        # Ensure it's a list
+        if isinstance(actions, dict):
+            actions = [actions]
+
+        return actions
 
     except Exception as e:
-        print("Intent Error:", e)
-        return {}
+        print("Groq Error:", e)
+        if 'result' in locals():
+            print("RAW LLM OUTPUT was:", result)
+        return []
