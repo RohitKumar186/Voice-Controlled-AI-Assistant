@@ -17,9 +17,9 @@ Cognition (brain.py): A strict JSON-parsing prompt forces the LLM to map natural
 Execution (main.py): A robust execution loop that sanitizes LLM output and executes system-level operations with built-in delays for UI stability.
 
 ### 💻 Tech Stack
-Component     :                Technology
-LLM Inference :                Groq Cloud (Llama 3.3 70B Versatile)
-Language      :                Python 3.10+
-GUI Automation :               PyAutoGUI
-Speech-to-Text :              Google Speech API
-Text-to-Speech :               Microsoft Edge TTS
+Component     :                Technology,
+LLM Inference :                Groq Cloud (Llama 3.3 70B Versatile),
+Language      :                Python 3.10+,
+GUI Automation :               PyAutoGUI,
+Speech-to-Text :              Google Speech API,
+Text-to-Speech :               Microsoft Edge TTS,
