@@ -1,7 +1,8 @@
 from matplotlib.pyplot import step
+from vision import click_text, double_click_text
 
-from brain import understand_command
-from brain import understand_intent
+from intent_engine import understand_intent
+from planner import create_plan
 from playsound import playsound
 import speech_recognition as sr
 import pyautogui
@@ -214,13 +215,25 @@ def execute(command):
         speak("Okay Rohit, stopping now")
         exit()
 
-    actions = understand_command(command)
-    if not actions:
-        speak("I didn’t understand that 🤔")
+    # 🧠 UNDERSTAND USER INTENT
+    intent = understand_intent(command, STATE)
+
+    if not intent:
+        speak("I could not understand your intention")
         return
 
-    actions = apply_rules(actions)
-    print("Final ACTIONS:", actions)
+    print("\n🧠 INTENT:")
+    print(intent)
+
+# 🔥 CREATE EXECUTION PLAN
+    actions = create_plan(intent)
+
+    print("\n📋 EXECUTION PLAN:")
+    print(actions)
+
+    if not actions:
+        speak("I don't know how to do that yet")
+        return
 
     if not actions:
         speak("I didn’t understand that properly 🤔")
@@ -237,6 +250,10 @@ def execute(command):
     "open_search",
     "open_website",
     "click"
+    "wait",
+    "create_folder",
+    "click_text",
+    "double_click_text"
 ]
 
     # 🔥 CLEAN INVALID ACTIONS
@@ -332,6 +349,13 @@ def execute(command):
             speak(f"Pressing {key}")
             pyautogui.press(key)
 
+        # ⏳ WAIT
+        elif action_type == "wait":
+
+            seconds = step.get("seconds", 1)
+            print(f"Waiting {seconds} seconds")
+            time.sleep(seconds)
+
         # 🔥 HOTKEY
         elif action_type == "hotkey":
             keys = step.get("keys")
@@ -354,6 +378,32 @@ def execute(command):
 
             speak(f"Closing {app}")
             os.system(f"taskkill /f /im {process}")
+
+        # 📁 CREATE FOLDER
+        elif action_type == "create_folder":
+
+            path = step.get("path", "")
+            folder_name = step.get("folder_name", "New Folder")
+
+            try:
+
+                if path.lower() == "downloads":
+                    base_path = os.path.join(os.path.expanduser("~"), "Downloads")
+
+                elif path.lower() == "desktop":
+                    base_path = os.path.join(os.path.expanduser("~"), "Desktop")
+
+                else:
+                    base_path = path
+
+                    full_path = os.path.join(base_path, folder_name)
+                    os.makedirs(full_path, exist_ok=True)
+                    speak(f"Folder {folder_name} created successfully")
+
+            except Exception as e:
+                print("Folder Error:", e)
+                speak("Failed to create folder")
+
         # 🔍 OPEN WINDOWS SEARCH
         elif action_type == "open_search":
             speak("Opening search")
@@ -382,6 +432,36 @@ def execute(command):
             speak("Clicking")
             pyautogui.click(x, y)
         
+        # 👀 CLICK TEXT ON SCREEN
+        elif action_type == "click_text":
+
+            text = step.get("text", "")
+
+            if not text:
+                continue
+
+            speak(f"Looking for {text}")
+
+            success = click_text(text)
+
+            if not success:
+                speak(f"I could not find {text}")
+        
+        # 👀 DOUBLE CLICK TEXT
+        elif action_type == "double_click_text":
+
+            text = step.get("text", "")
+
+            if not text:
+                continue
+
+            speak(f"Opening {text}")
+
+            success = double_click_text(text)
+
+            if not success:
+                speak(f"I could not find {text}")
+
         elif action_type == "focus_search":
             speak("Focusing search")
             time.sleep(1)
@@ -389,6 +469,7 @@ def execute(command):
     # 🔥 BEST METHOD (universal)
             pyautogui.hotkey("ctrl", "l")   # focus address bar
             time.sleep(5)
+        
 
 # 🚀 START
 print("Zoro is running...")
