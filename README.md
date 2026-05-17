@@ -22,4 +22,25 @@ LLM Inference :                Groq Cloud (Llama 3.3 70B Versatile),
 Language      :                Python 3.10+,
 GUI Automation :               PyAutoGUI,
 Speech-to-Text :              Google Speech API,
-Text-to-Speech :               Microsoft Edge TTS,
+Text-to-Speech :               Microsoft Edge TTS
+
+### What We Built
+Replaced static command parsing with dynamic intent understanding
+Added an AI planner that converts user goals into executable action steps
+Built an OCR-based vision system using EasyOCR
+Added dynamic screen text detection and clicking
+Added support for folder/file navigation through OCR
+Improved architecture separation:
+intent_engine.py → understands user intention
+planner.py → generates action plans dynamically
+vision.py → handles OCR screen understanding
+main.py → executes actions
+ ### Features Added
+Dynamic intent extraction using Groq + Llama 3.3 70B
+AI-generated execution plans
+OCR text detection on screen
+click_text() and double_click_text() vision actions
+Folder creation automation
+YouTube search/play workflows
+WhatsApp messaging workflows
+Context and state tracking
